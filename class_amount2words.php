@@ -11,6 +11,7 @@ class AMOUNT2WORDS {
   
   /**
    * Обработчик
+   *
    * @param integer|float|string $number Число
    * @param string $lang Язык ответа ua|ru
    * @param string $currency Валюта UAH|USD|EUR|RUB
@@ -18,6 +19,7 @@ class AMOUNT2WORDS {
    * @param bool $decimal2String Преобразовывать копейки в строку
    * @param integer $textTransform Регистр текста 0 LOWER|1 UPPER|2 FIRST_CHAR_UPPER
    * @param string $codePage Кодировка ответа UTF-8|WINDOWS-1251
+   *
    * @return string
    */
   public function getString($number = 0, $lang = 'ua', $currency = 'UAH', $decimal = true, $decimal2String = false, $textTransform = 0, $codePage = 'UTF-8') {
@@ -88,10 +90,10 @@ class AMOUNT2WORDS {
     $string = 0 === (integer)$amount ? $this->local['digital'][$currency][0][0] : self::getNumber2String($amount, $currency, false);
     
     # Название валюты
-    $string .= empty($string) ? '' : " ".self::number2word($amount, $this->local['currency'][$currency]);
+    $string .= empty($string) ? '' : " ".self::getWordInCase($amount, $this->local['currency'][$currency]);
     
     # Дробная часть
-    $string .= $decimal ? ($decimal2String ? " ".(0 === (integer)$cents ? $this->local['digital'][$currency][0][0] : self::getNumber2String("0{$cents}", $currency, true))." ".self::number2word($cents, $this->local['cents'][$currency]) : " {$cents} ".self::number2word($cents, $this->local['cents'][$currency])) : '';
+    $string .= $decimal ? ($decimal2String ? " ".(0 === (integer)$cents ? $this->local['digital'][$currency][0][0] : self::getNumber2String("0{$cents}", $currency, true))." ".self::getWordInCase($cents, $this->local['cents'][$currency]) : " {$cents} ".self::getWordInCase($cents, $this->local['cents'][$currency])) : '';
     
     # Регистр
     switch ($textTransform) {
@@ -106,20 +108,22 @@ class AMOUNT2WORDS {
         $string = mb_strtoupper(mb_substr($string, 0, 1)).mb_substr($string, 1);
     }
     
-    return $string;//mb_convert_encoding($string, $codePage, 'UTF-8');
+    return empty($string) || 'UTF-8' === $codePage ? $string : mb_convert_encoding($string, $codePage, 'UTF-8');
   }
   /**
    * Получить число прописью
+   *
    * @param string $number
    * @param string $currency
    * @param string $cents
+   *
    * @return string
    */
   private function getNumber2String($number, $currency, $cents) {
     
     $result = [];
     
-    # Прописью целую часть
+    # Разбиваем строку на триады
     foreach (array_reverse(str_split(str_pad($number, ceil(strlen($number) / 3) * 3, '0', STR_PAD_LEFT), 3)) as $triads => $value) {
       
       $result[$triads] = [];
@@ -188,8 +192,39 @@ class AMOUNT2WORDS {
     return empty($result) ? '' : implode(' ', array_reverse($result));
   }
   /**
+   * Падеж от числа
+   *
+   * @param integer $number Число
+   * @param array $arrayWords Массив слов
+   *
+   * @return string
+   */
+  private function getWordInCase($number, $arrayWords) {
+    
+    $number = $number % 100;
+    $number = 19 < $number ? $number % 10 : $number;
+    
+    switch ($number) {
+      case 1:
+        
+        return empty($arrayWords[1]) ? '' : (string)$arrayWords[1];
+      
+      case 2:
+      case 3:
+      case 4:
+        
+        return empty($arrayWords[2]) ? '' : (string)$arrayWords[2];
+      
+      default:
+        
+        return empty($arrayWords[0]) ? '' : (string)$arrayWords[0];
+    }
+  }
+  /**
    * Языковая локализация
+   *
    * @param string $lang
+   *
    * @return bool|array
    */
   private function getLocalization($lang) {
@@ -882,32 +917,5 @@ class AMOUNT2WORDS {
     ];
     
     return empty($array[$lang]) ? false : $array[$lang];
-  }
-  /**
-   * Падеж от числа
-   * @param integer $number Число
-   * @param array $arrayWords Массив слов
-   * @return string
-   */
-  private function number2word($number, $arrayWords) {
-    
-    $number = $number % 100;
-    $number = 19 < $number ? $number % 10 : $number;
-    
-    switch ($number) {
-      case 1:
-        
-        return empty($arrayWords[1]) ? '' : (string)$arrayWords[1];
-      
-      case 2:
-      case 3:
-      case 4:
-        
-        return empty($arrayWords[2]) ? '' : (string)$arrayWords[2];
-      
-      default:
-        
-        return empty($arrayWords[0]) ? '' : (string)$arrayWords[0];
-    }
   }
 }
